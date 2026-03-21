@@ -118,8 +118,9 @@ export default function MapView({
   const baseLayer =
     BASE_LAYERS.find(b => b.id === baseLayerId) ?? BASE_LAYERS[0]
 
-  // Sentinel time range: searches up to 10 days before selected date
-  const sentinelTime = sentinelTimeRange(nasaDate, 10)
+  // Sentinel time range: searches up to 60 days before selected date
+  // to ensure full mosaic coverage (satellite revisits every 5 days)
+  const sentinelTime = sentinelTimeRange(nasaDate, 60)
 
   // Which Sentinel Hub layer name to use
   const shLayerName =
@@ -169,7 +170,6 @@ export default function MapView({
             version="1.1.1"
             opacity={nasaOpacity}
             maxZoom={18}
-            tileSize={512}
             params={{
               TIME: sentinelTime,
               MAXCC: gisSettings.maxCloudCover,

@@ -9,35 +9,41 @@ import {
   useMap,
 } from 'react-leaflet'
 import L from 'leaflet'
-import { WMS_URL } from '../utils/layers'
+import LayerPanel from './LayerPanel'
+import { BASE_LAYERS, LABELS_URL, NASA_OVERLAYS, WMS_URL } from '../utils/layers'
 
-// Fix leaflet default icon paths (broken by bundlers)
+// Fix leaflet default icon paths
 delete L.Icon.Default.prototype._getIconUrl
 L.Icon.Default.mergeOptions({
-  iconRetinaUrl: 'https://unpkg.com/leaflet@1.9.4/dist/images/marker-icon-2x.png',
+  iconRetinaUrl:
+    'https://unpkg.com/leaflet@1.9.4/dist/images/marker-icon-2x.png',
   iconUrl: 'https://unpkg.com/leaflet@1.9.4/dist/images/marker-icon.png',
   shadowUrl: 'https://unpkg.com/leaflet@1.9.4/dist/images/marker-shadow.png',
 })
 
+/* ─── Status marker ──────────────────────────────────────────────── */
 const STATUS_COLORS = {
   Liberado: '#3fb950',
-  Atenção: '#d29922',
+  'Atenção': '#d29922',
   Bloqueado: '#f85149',
 }
 
 function createMarkerIcon(status, selected = false) {
   const color = STATUS_COLORS[status] ?? '#8b949e'
-  const size = selected ? 20 : 14
+  const size = selected ? 22 : 14
+  const ring = selected
+    ? `box-shadow:0 0 0 4px ${color}44, 0 2px 10px rgba(0,0,0,.6);`
+    : `box-shadow:0 0 0 2px ${color}44, 0 2px 6px rgba(0,0,0,.5);`
   const pulse =
     status === 'Bloqueado'
-      ? `<div class="marker-pulse" style="border-color:${color};width:${size + 14}px;height:${size + 14}px;top:${-(7)}px;left:${-(7)}px;"></div>`
+      ? `<div class="marker-pulse" style="border-color:${color};width:${size + 16}px;height:${size + 16}px;top:-8px;left:-8px;"></div>`
       : ''
 
   return L.divIcon({
     className: '',
     html: `<div style="position:relative;width:${size}px;height:${size}px;">
       ${pulse}
-      <div style="width:${size}px;height:${size}px;border-radius:50%;background:${color};border:2.5px solid rgba(255,255,255,0.95);box-shadow:0 0 0 2px ${color}55,0 2px 8px rgba(0,0,0,0.55);"></div>
+      <div style="width:${size}px;height:${size}px;border-radius:50%;background:${color};border:2.5px solid rgba(255,255,255,.95);${ring}"></div>
     </div>`,
     iconSize: [size, size],
     iconAnchor: [size / 2, size / 2],
@@ -45,6 +51,7 @@ function createMarkerIcon(status, selected = false) {
   })
 }
 
+/* ─── Map sub-components ─────────────────────────────────────────── */
 function MapEvents({ isAddingArea, onMapClick, onMouseMove }) {
   useMapEvents({
     click(e) {
@@ -68,21 +75,36 @@ function MapRefBridge({ mapRef }) {
   return null
 }
 
+/* ─── Main component ─────────────────────────────────────────────── */
 export default function MapView({
   areas,
   selectedAreaId,
-  currentLayer,
-  selectedDate,
-  opacity,
-  isAddingArea,
+  onSelectArea,
   onMapClick,
   onMouseMove,
-  onSelectArea,
   mapRef,
   mouseCoords,
+  isAddingArea,
+  // Layer props
+  baseLayerId,
+  onBaseLayerChange,
+  showLabels,
+  onToggleLabels,
+  activeOverlays,
+  onToggleOverlay,
+  nasaDate,
+  onNasaDateChange,
+  nasaOpacity,
+  onNasaOpacityChange,
+  showRadar,
+  onToggleRadar,
+  rain,
 }) {
+  const baseLayer = BASE_LAYERS.find(b => b.id === baseLayerId) ?? BASE_LAYERS[0]
+
   return (
     <div className={`map-wrapper${isAddingArea ? ' adding-mode' : ''}`}>
+      {/* Adding hint */}
       {isAddingArea && (
         <div className="map-hint">
           Clique no mapa para posicionar a nova área
@@ -102,29 +124,54 @@ export default function MapView({
           onMouseMove={onMouseMove}
         />
 
-        {/* Base OSM */}
+        {/* ── Base layer ─────────────────────────────── */}
         <TileLayer
-          url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
-          attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>'
-          maxZoom={19}
+          key={baseLayer.id}
+          url={baseLayer.url}
+          attribution={baseLayer.attribution}
+          maxZoom={baseLayer.maxZoom}
         />
 
-        {/* NASA GIBS satellite layer */}
-        {currentLayer.id && (
-          <WMSTileLayer
-            key={`${currentLayer.id}-${selectedDate}`}
-            url={WMS_URL}
-            layers={currentLayer.id}
-            format={currentLayer.format}
-            transparent={currentLayer.transparent}
-            version="1.1.1"
-            opacity={opacity}
-            params={{ TIME: selectedDate }}
-            attribution='Imagens: <a href="https://earthdata.nasa.gov" target="_blank">NASA GIBS</a>'
+        {/* ── Labels overlay (satellite mode) ────────── */}
+        {baseLayerId === 'satellite' && showLabels && (
+          <TileLayer
+            url={LABELS_URL}
+            maxZoom={19}
+            pane="shadowPane"
           />
         )}
 
-        {/* Area markers */}
+        {/* ── NASA GIBS overlays ─────────────────────── */}
+        {activeOverlays.map(olId => {
+          const ol = NASA_OVERLAYS.find(o => o.id === olId)
+          if (!ol) return null
+          return (
+            <WMSTileLayer
+              key={`${ol.id}-${nasaDate}`}
+              url={WMS_URL}
+              layers={ol.wmsLayer}
+              format={ol.format}
+              transparent={ol.transparent}
+              version="1.1.1"
+              opacity={nasaOpacity}
+              params={{ TIME: nasaDate }}
+              attribution='<a href="https://earthdata.nasa.gov" target="_blank">NASA GIBS</a>'
+            />
+          )
+        })}
+
+        {/* ── Rain radar ─────────────────────────────── */}
+        {showRadar && rain.radarTileUrl && (
+          <TileLayer
+            key={`radar-${rain.frameIdx}`}
+            url={rain.radarTileUrl}
+            opacity={0.65}
+            maxZoom={18}
+            attribution='<a href="https://www.rainviewer.com" target="_blank">RainViewer</a>'
+          />
+        )}
+
+        {/* ── Area markers ───────────────────────────── */}
         {areas.map(area => (
           <Marker
             key={area.id}
@@ -135,7 +182,9 @@ export default function MapView({
             <Popup>
               <div className="map-popup">
                 <div className="popup-name">{area.name}</div>
-                <div className="popup-meta">{area.municipio} · {area.tipo}</div>
+                <div className="popup-meta">
+                  {area.municipio} · {area.tipo}
+                </div>
                 <div
                   className="popup-status"
                   style={{ color: STATUS_COLORS[area.status] }}
@@ -151,17 +200,52 @@ export default function MapView({
         ))}
       </MapContainer>
 
-      {/* Coordinate HUD */}
+      {/* ── Layer control panel (floating) ────────── */}
+      <LayerPanel
+        baseLayerId={baseLayerId}
+        onBaseLayerChange={onBaseLayerChange}
+        showLabels={showLabels}
+        onToggleLabels={onToggleLabels}
+        activeOverlays={activeOverlays}
+        onToggleOverlay={onToggleOverlay}
+        nasaDate={nasaDate}
+        onNasaDateChange={onNasaDateChange}
+        nasaOpacity={nasaOpacity}
+        onNasaOpacityChange={onNasaOpacityChange}
+        showRadar={showRadar}
+        onToggleRadar={onToggleRadar}
+        radarTime={rain.radarTime}
+        radarFrames={rain.frames}
+        radarFrameIdx={rain.frameIdx}
+        onRadarFrameChange={rain.setFrameIdx}
+      />
+
+      {/* ── Coordinate display ───────────────────── */}
       {mouseCoords && (
         <div className="coord-display">
           {mouseCoords.lat.toFixed(5)}, {mouseCoords.lng.toFixed(5)}
         </div>
       )}
 
-      {/* Bottom info bar */}
+      {/* ── Bottom info bar ──────────────────────── */}
       <div className="map-info-bar">
-        <span>Imagem: <strong>{selectedDate}</strong></span>
-        <span className="cloud-warn">⚠ Cobertura de nuvens pode limitar a visualização</span>
+        <span>
+          Base: <strong>{baseLayer.label}</strong>
+        </span>
+        {activeOverlays.length > 0 && (
+          <span>
+            NASA: <strong>{nasaDate}</strong>
+          </span>
+        )}
+        {showRadar && rain.radarTime && (
+          <span className="radar-badge">
+            🌧 Radar:{' '}
+            {rain.radarTime.toLocaleTimeString('pt-BR', {
+              hour: '2-digit',
+              minute: '2-digit',
+            })}
+          </span>
+        )}
       </div>
     </div>
   )

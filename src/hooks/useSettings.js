@@ -4,7 +4,7 @@ const STORAGE_KEY = 'ccm-settings-v1'
 
 const DEFAULTS = {
   provider: 'copernicus', // 'copernicus' | 'sentinelhub'
-  instanceId: '',
+  instanceId: '5d4284a6-0700-4596-b78a-04169a826b36',
   sentinelLayer: 'TRUE_COLOR',
   landsatLayer: 'TRUE_COLOR',
   maxCloudCover: 30,

@@ -613,6 +613,78 @@ html, body, #root {
   font-variant-numeric: tabular-nums;
 }
 
+/* Quick date buttons */
+.lp-date-section {
+  background: rgba(47,129,247,.05);
+}
+.lp-quick-dates {
+  display: flex;
+  gap: 4px;
+  margin-bottom: 8px;
+  flex-wrap: wrap;
+}
+.qd-btn {
+  padding: 4px 10px;
+  border-radius: 6px;
+  border: 1px solid var(--border);
+  background: var(--bg-2);
+  color: var(--text-1);
+  font-family: inherit;
+  font-size: 11px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.15s;
+}
+.qd-btn:hover {
+  border-color: var(--accent);
+  color: var(--text-0);
+}
+.qd-btn.active {
+  background: var(--accent);
+  border-color: var(--accent);
+  color: #fff;
+}
+.lp-date-input {
+  width: 100%;
+  background: var(--bg-2);
+  border: 1px solid var(--border);
+  color: var(--text-0);
+  padding: 5px 8px;
+  border-radius: 5px;
+  font-family: inherit;
+  font-size: 12px;
+  cursor: pointer;
+  outline: none;
+}
+.lp-date-input:hover,
+.lp-date-input:focus { border-color: var(--accent); }
+.lp-date-display {
+  margin-top: 6px;
+  font-size: 11px;
+  color: var(--accent);
+  font-weight: 500;
+}
+
+.lp-sublabel {
+  display: block;
+  font-size: 10px;
+  color: var(--text-2);
+  font-weight: 400;
+  margin-top: 1px;
+}
+.lp-radio-content {
+  display: flex;
+  flex-direction: column;
+}
+
+.lp-tip-section { border-bottom: none; }
+.lp-tip {
+  font-size: 11px;
+  color: var(--text-2);
+  line-height: 1.5;
+  padding: 4px 0;
+}
+
 .lp-hint {
   margin-top: 6px;
   padding: 5px 8px;

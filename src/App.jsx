@@ -17,11 +17,11 @@ export default function App() {
   const [pendingCoords, setPendingCoords] = useState(null)
 
   // Layers
-  const [baseLayerId, setBaseLayerId] = useState('satellite')
+  const [baseLayerId, setBaseLayerId] = useState('viirs')
   const [showLabels, setShowLabels] = useState(true)
   const [activeOverlays, setActiveOverlays] = useState([])
   const [nasaDate, setNasaDate] = useState(getYesterday())
-  const [nasaOpacity, setNasaOpacity] = useState(0.6)
+  const [nasaOpacity, setNasaOpacity] = useState(1.0)
   const [showRadar, setShowRadar] = useState(false)
 
   // UI

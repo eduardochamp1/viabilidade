@@ -101,6 +101,7 @@ export default function MapView({
   rain,
 }) {
   const baseLayer = BASE_LAYERS.find(b => b.id === baseLayerId) ?? BASE_LAYERS[0]
+  const isNasaBase = baseLayer.type === 'nasa'
 
   return (
     <div className={`map-wrapper${isAddingArea ? ' adding-mode' : ''}`}>
@@ -124,43 +125,60 @@ export default function MapView({
           onMouseMove={onMouseMove}
         />
 
-        {/* ── Base layer ─────────────────────────────── */}
-        <TileLayer
-          key={baseLayer.id}
-          url={baseLayer.url}
-          attribution={baseLayer.attribution}
-          maxZoom={baseLayer.maxZoom}
-        />
+        {/* ── Base: regular tiles (OSM) ──────────── */}
+        {baseLayer.type === 'tiles' && (
+          <TileLayer
+            key={baseLayer.id}
+            url={baseLayer.url}
+            attribution={baseLayer.attribution}
+            maxZoom={baseLayer.maxZoom}
+          />
+        )}
 
-        {/* ── Labels overlay (satellite mode) ────────── */}
-        {baseLayerId === 'satellite' && showLabels && (
+        {/* ── Base: NASA GIBS daily satellite ────── */}
+        {isNasaBase && (
+          <WMSTileLayer
+            key={`base-${baseLayer.id}-${nasaDate}`}
+            url={WMS_URL}
+            layers={baseLayer.wmsLayer}
+            format={baseLayer.format}
+            transparent={false}
+            version="1.1.1"
+            opacity={nasaOpacity}
+            params={{ TIME: nasaDate }}
+            attribution='Imagem diária: <a href="https://earthdata.nasa.gov" target="_blank">NASA GIBS</a>'
+          />
+        )}
+
+        {/* ── Labels overlay ─────────────────────── */}
+        {isNasaBase && showLabels && (
           <TileLayer
             url={LABELS_URL}
             maxZoom={19}
             pane="shadowPane"
+            attribution="Esri"
           />
         )}
 
-        {/* ── NASA GIBS overlays ─────────────────────── */}
+        {/* ── NASA GIBS overlays ─────────────────── */}
         {activeOverlays.map(olId => {
           const ol = NASA_OVERLAYS.find(o => o.id === olId)
           if (!ol) return null
           return (
             <WMSTileLayer
-              key={`${ol.id}-${nasaDate}`}
+              key={`ol-${ol.id}-${nasaDate}`}
               url={WMS_URL}
               layers={ol.wmsLayer}
               format={ol.format}
               transparent={ol.transparent}
               version="1.1.1"
-              opacity={nasaOpacity}
+              opacity={0.7}
               params={{ TIME: nasaDate }}
-              attribution='<a href="https://earthdata.nasa.gov" target="_blank">NASA GIBS</a>'
             />
           )
         })}
 
-        {/* ── Rain radar ─────────────────────────────── */}
+        {/* ── Rain radar ─────────────────────────── */}
         {showRadar && rain.radarTileUrl && (
           <TileLayer
             key={`radar-${rain.frameIdx}`}
@@ -171,7 +189,7 @@ export default function MapView({
           />
         )}
 
-        {/* ── Area markers ───────────────────────────── */}
+        {/* ── Area markers ───────────────────────── */}
         {areas.map(area => (
           <Marker
             key={area.id}
@@ -200,7 +218,7 @@ export default function MapView({
         ))}
       </MapContainer>
 
-      {/* ── Layer control panel (floating) ────────── */}
+      {/* ── Layer control panel ──────────────────── */}
       <LayerPanel
         baseLayerId={baseLayerId}
         onBaseLayerChange={onBaseLayerChange}
@@ -229,17 +247,15 @@ export default function MapView({
 
       {/* ── Bottom info bar ──────────────────────── */}
       <div className="map-info-bar">
-        <span>
-          Base: <strong>{baseLayer.label}</strong>
-        </span>
-        {activeOverlays.length > 0 && (
+        {isNasaBase && (
           <span>
-            NASA: <strong>{nasaDate}</strong>
+            📡 Imagem: <strong>{nasaDate}</strong> — {baseLayer.label}
           </span>
         )}
+        {!isNasaBase && <span>Base: {baseLayer.label}</span>}
         {showRadar && rain.radarTime && (
           <span className="radar-badge">
-            🌧 Radar:{' '}
+            🌧{' '}
             {rain.radarTime.toLocaleTimeString('pt-BR', {
               hour: '2-digit',
               minute: '2-digit',

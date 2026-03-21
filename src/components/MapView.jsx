@@ -118,9 +118,9 @@ export default function MapView({
   const baseLayer =
     BASE_LAYERS.find(b => b.id === baseLayerId) ?? BASE_LAYERS[0]
 
-  // Sentinel time range: searches up to 30 days before selected date
-  // Sentinel-2 revisits every 5 days, so 30 days = ~6 passes = full coverage
-  const sentinelTime = sentinelTimeRange(nasaDate, 30)
+  // Sentinel-2 revisits every 5 days; 15 days = 3 passes = good coverage
+  // Shorter window = faster server response
+  const sentinelTime = sentinelTimeRange(nasaDate, 15)
 
   // Which Sentinel Hub layer name to use
   const shLayerName =
@@ -149,17 +149,16 @@ export default function MapView({
           coordRef={coordRef}
         />
 
-        {/* ── Base: OSM tiles ────────────────────── */}
-        {baseLayer.type === 'tiles' && (
-          <TileLayer
-            key={baseLayer.id}
-            url={baseLayer.url}
-            attribution={baseLayer.attribution}
-            maxZoom={baseLayer.maxZoom}
-          />
-        )}
+        {/* ── OSM always underneath as fallback ─── */}
+        <TileLayer
+          url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
+          attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>'
+          maxZoom={19}
+        />
 
-        {/* ── Base: Sentinel-2 / Landsat via Sentinel Hub WMS ── */}
+        {/* ── Base: custom OSM (already rendered above) ── */}
+
+        {/* ── Sentinel-2 / Landsat via Sentinel Hub WMS ── */}
         {baseLayer.type === 'sentinel' && isGisConfigured && wmsBaseUrl && (
           <WMSTileLayer
             key={`sh-${baseLayer.id}-${nasaDate}`}
@@ -169,8 +168,9 @@ export default function MapView({
             transparent={false}
             version="1.1.1"
             opacity={nasaOpacity}
-            maxZoom={18}
             tileSize={512}
+            maxNativeZoom={14}
+            maxZoom={19}
             params={{
               TIME: sentinelTime,
               MAXCC: gisSettings.maxCloudCover,
@@ -192,6 +192,8 @@ export default function MapView({
             transparent={false}
             version="1.1.1"
             opacity={nasaOpacity}
+            maxNativeZoom={9}
+            maxZoom={19}
             params={{ TIME: nasaDate }}
             attribution='<a href="https://earthdata.nasa.gov" target="_blank">NASA GIBS</a>'
           />

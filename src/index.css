@@ -829,6 +829,36 @@ html, body, #root {
   background: #1a2033 !important;
   font-family: 'DM Sans', sans-serif !important;
 }
+/* Loading animation for tiles */
+.leaflet-tile-container img[src] {
+  transition: opacity 0.3s ease;
+}
+.leaflet-tile-loading {
+  background: var(--bg-2);
+}
+/* Tile loading spinner via pane */
+.leaflet-tile-pane::after {
+  content: '';
+  display: none;
+}
+.leaflet-loading .leaflet-tile-pane::after {
+  content: 'Carregando satélite...';
+  display: block;
+  position: absolute;
+  top: 12px;
+  left: 50%;
+  transform: translateX(-50%);
+  background: rgba(13,17,23,.88);
+  backdrop-filter: blur(6px);
+  border: 1px solid var(--border);
+  color: var(--yellow);
+  padding: 6px 14px;
+  border-radius: 6px;
+  font-size: 12px;
+  font-family: 'DM Sans', sans-serif;
+  z-index: 9999;
+  pointer-events: none;
+}
 .leaflet-popup-content-wrapper {
   background: var(--bg-1) !important;
   border: 1px solid var(--border) !important;

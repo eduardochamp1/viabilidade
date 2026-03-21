@@ -3,21 +3,26 @@ import Header from './components/Header'
 import Sidebar from './components/Sidebar'
 import MapView from './components/MapView'
 import AddAreaModal from './components/AddAreaModal'
+import SettingsModal from './components/SettingsModal'
 import { useAreas } from './hooks/useAreas'
 import { useRainRadar } from './hooks/useRainRadar'
+import { useSettings } from './hooks/useSettings'
 import { getYesterday } from './utils/layers'
 
 export default function App() {
   const { areas, addArea, updateArea, deleteArea } = useAreas()
   const rain = useRainRadar()
+  const { settings, updateAll, isConfigured, wmsBaseUrl } = useSettings()
 
   // Area selection
   const [selectedAreaId, setSelectedAreaId] = useState(null)
   const [isAddingArea, setIsAddingArea] = useState(false)
   const [pendingCoords, setPendingCoords] = useState(null)
 
-  // Layers
-  const [baseLayerId, setBaseLayerId] = useState('viirs')
+  // Layers — default to Sentinel-2 if configured, else NASA VIIRS
+  const [baseLayerId, setBaseLayerId] = useState(
+    isConfigured ? 'sentinel2' : 'viirs',
+  )
   const [showLabels, setShowLabels] = useState(true)
   const [activeOverlays, setActiveOverlays] = useState([])
   const [nasaDate, setNasaDate] = useState(getYesterday())
@@ -27,9 +32,9 @@ export default function App() {
   // UI
   const [mouseCoords, setMouseCoords] = useState(null)
   const [sidebarOpen, setSidebarOpen] = useState(true)
+  const [settingsOpen, setSettingsOpen] = useState(false)
   const mapRef = useRef(null)
 
-  // Stats
   const stats = {
     total: areas.length,
     liberado: areas.filter(a => a.status === 'Liberado').length,
@@ -66,9 +71,12 @@ export default function App() {
     }
   }
 
-  function handleCancelAdd() {
-    setPendingCoords(null)
-    setIsAddingArea(false)
+  function handleSaveSettings(newSettings) {
+    updateAll(newSettings)
+    // Auto-switch to Sentinel-2 when first configured
+    if (newSettings.instanceId?.trim() && !isConfigured) {
+      setBaseLayerId('sentinel2')
+    }
   }
 
   return (
@@ -101,7 +109,7 @@ export default function App() {
           mapRef={mapRef}
           mouseCoords={mouseCoords}
           isAddingArea={isAddingArea}
-          /* Layer state */
+          // Layers
           baseLayerId={baseLayerId}
           onBaseLayerChange={setBaseLayerId}
           showLabels={showLabels}
@@ -115,14 +123,32 @@ export default function App() {
           showRadar={showRadar}
           onToggleRadar={() => setShowRadar(v => !v)}
           rain={rain}
+          // Sentinel/GIS
+          gisSettings={settings}
+          isGisConfigured={isConfigured}
+          wmsBaseUrl={wmsBaseUrl}
+          onOpenSettings={() => setSettingsOpen(true)}
         />
       </div>
 
+      {/* Add area modal */}
       {pendingCoords && (
         <AddAreaModal
           coords={pendingCoords}
           onConfirm={handleAddArea}
-          onCancel={handleCancelAdd}
+          onCancel={() => {
+            setPendingCoords(null)
+            setIsAddingArea(false)
+          }}
+        />
+      )}
+
+      {/* Settings modal */}
+      {settingsOpen && (
+        <SettingsModal
+          settings={settings}
+          onSave={handleSaveSettings}
+          onClose={() => setSettingsOpen(false)}
         />
       )}
     </div>

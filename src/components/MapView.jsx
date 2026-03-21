@@ -10,9 +10,15 @@ import {
 } from 'react-leaflet'
 import L from 'leaflet'
 import LayerPanel from './LayerPanel'
-import { BASE_LAYERS, LABELS_URL, NASA_OVERLAYS, WMS_URL } from '../utils/layers'
+import {
+  BASE_LAYERS,
+  LABELS_URL,
+  NASA_OVERLAYS,
+  WMS_URL,
+  sentinelTimeRange,
+} from '../utils/layers'
 
-// Fix leaflet default icon paths
+// Fix leaflet icon paths
 delete L.Icon.Default.prototype._getIconUrl
 L.Icon.Default.mergeOptions({
   iconRetinaUrl:
@@ -32,13 +38,12 @@ function createMarkerIcon(status, selected = false) {
   const color = STATUS_COLORS[status] ?? '#8b949e'
   const size = selected ? 22 : 14
   const ring = selected
-    ? `box-shadow:0 0 0 4px ${color}44, 0 2px 10px rgba(0,0,0,.6);`
-    : `box-shadow:0 0 0 2px ${color}44, 0 2px 6px rgba(0,0,0,.5);`
+    ? `box-shadow:0 0 0 4px ${color}44,0 2px 10px rgba(0,0,0,.6);`
+    : `box-shadow:0 0 0 2px ${color}44,0 2px 6px rgba(0,0,0,.5);`
   const pulse =
     status === 'Bloqueado'
       ? `<div class="marker-pulse" style="border-color:${color};width:${size + 16}px;height:${size + 16}px;top:-8px;left:-8px;"></div>`
       : ''
-
   return L.divIcon({
     className: '',
     html: `<div style="position:relative;width:${size}px;height:${size}px;">
@@ -75,7 +80,7 @@ function MapRefBridge({ mapRef }) {
   return null
 }
 
-/* ─── Main component ─────────────────────────────────────────────── */
+/* ─── Main ───────────────────────────────────────────────────────── */
 export default function MapView({
   areas,
   selectedAreaId,
@@ -85,7 +90,7 @@ export default function MapView({
   mapRef,
   mouseCoords,
   isAddingArea,
-  // Layer props
+  // Layer state
   baseLayerId,
   onBaseLayerChange,
   showLabels,
@@ -99,13 +104,26 @@ export default function MapView({
   showRadar,
   onToggleRadar,
   rain,
+  // Sentinel / GIS settings
+  gisSettings,
+  isGisConfigured,
+  wmsBaseUrl,
+  onOpenSettings,
 }) {
-  const baseLayer = BASE_LAYERS.find(b => b.id === baseLayerId) ?? BASE_LAYERS[0]
-  const isNasaBase = baseLayer.type === 'nasa'
+  const baseLayer =
+    BASE_LAYERS.find(b => b.id === baseLayerId) ?? BASE_LAYERS[0]
+
+  // Sentinel time range: searches up to 10 days before selected date
+  const sentinelTime = sentinelTimeRange(nasaDate, 10)
+
+  // Which Sentinel Hub layer name to use
+  const shLayerName =
+    baseLayer.source === 'landsat'
+      ? gisSettings.landsatLayer
+      : gisSettings.sentinelLayer
 
   return (
     <div className={`map-wrapper${isAddingArea ? ' adding-mode' : ''}`}>
-      {/* Adding hint */}
       {isAddingArea && (
         <div className="map-hint">
           Clique no mapa para posicionar a nova área
@@ -125,7 +143,7 @@ export default function MapView({
           onMouseMove={onMouseMove}
         />
 
-        {/* ── Base: regular tiles (OSM) ──────────── */}
+        {/* ── Base: OSM tiles ────────────────────── */}
         {baseLayer.type === 'tiles' && (
           <TileLayer
             key={baseLayer.id}
@@ -135,10 +153,31 @@ export default function MapView({
           />
         )}
 
-        {/* ── Base: NASA GIBS daily satellite ────── */}
-        {isNasaBase && (
+        {/* ── Base: Sentinel-2 / Landsat via Sentinel Hub WMS ── */}
+        {baseLayer.type === 'sentinel' && isGisConfigured && wmsBaseUrl && (
           <WMSTileLayer
-            key={`base-${baseLayer.id}-${nasaDate}`}
+            key={`sh-${baseLayer.id}-${nasaDate}`}
+            url={wmsBaseUrl}
+            layers={shLayerName}
+            format="image/jpeg"
+            transparent={false}
+            version="1.1.1"
+            opacity={nasaOpacity}
+            maxZoom={18}
+            tileSize={512}
+            params={{
+              TIME: sentinelTime,
+              MAXCC: gisSettings.maxCloudCover,
+              SHOWLOGO: false,
+            }}
+            attribution={`${baseLayer.label} — <a href="https://dataspace.copernicus.eu" target="_blank">Copernicus</a>`}
+          />
+        )}
+
+        {/* ── Base: NASA GIBS daily ──────────────── */}
+        {baseLayer.type === 'nasa' && (
+          <WMSTileLayer
+            key={`nasa-${baseLayer.id}-${nasaDate}`}
             url={WMS_URL}
             layers={baseLayer.wmsLayer}
             format={baseLayer.format}
@@ -146,18 +185,13 @@ export default function MapView({
             version="1.1.1"
             opacity={nasaOpacity}
             params={{ TIME: nasaDate }}
-            attribution='Imagem diária: <a href="https://earthdata.nasa.gov" target="_blank">NASA GIBS</a>'
+            attribution='<a href="https://earthdata.nasa.gov" target="_blank">NASA GIBS</a>'
           />
         )}
 
         {/* ── Labels overlay ─────────────────────── */}
-        {isNasaBase && showLabels && (
-          <TileLayer
-            url={LABELS_URL}
-            maxZoom={19}
-            pane="shadowPane"
-            attribution="Esri"
-          />
+        {baseLayer.type !== 'tiles' && showLabels && (
+          <TileLayer url={LABELS_URL} maxZoom={19} pane="shadowPane" />
         )}
 
         {/* ── NASA GIBS overlays ─────────────────── */}
@@ -218,7 +252,7 @@ export default function MapView({
         ))}
       </MapContainer>
 
-      {/* ── Layer control panel ──────────────────── */}
+      {/* ── Layer panel ──────────────────────────── */}
       <LayerPanel
         baseLayerId={baseLayerId}
         onBaseLayerChange={onBaseLayerChange}
@@ -236,23 +270,25 @@ export default function MapView({
         radarFrames={rain.frames}
         radarFrameIdx={rain.frameIdx}
         onRadarFrameChange={rain.setFrameIdx}
+        isGisConfigured={isGisConfigured}
+        onOpenSettings={onOpenSettings}
       />
 
-      {/* ── Coordinate display ───────────────────── */}
+      {/* ── Coordinates ──────────────────────────── */}
       {mouseCoords && (
         <div className="coord-display">
           {mouseCoords.lat.toFixed(5)}, {mouseCoords.lng.toFixed(5)}
         </div>
       )}
 
-      {/* ── Bottom info bar ──────────────────────── */}
+      {/* ── Info bar ─────────────────────────────── */}
       <div className="map-info-bar">
-        {isNasaBase && (
-          <span>
-            📡 Imagem: <strong>{nasaDate}</strong> — {baseLayer.label}
-          </span>
+        <span>
+          📡 <strong>{baseLayer.label}</strong>
+        </span>
+        {(baseLayer.type === 'sentinel' || baseLayer.type === 'nasa') && (
+          <span>Data: {nasaDate}</span>
         )}
-        {!isNasaBase && <span>Base: {baseLayer.label}</span>}
         {showRadar && rain.radarTime && (
           <span className="radar-badge">
             🌧{' '}

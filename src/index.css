@@ -684,6 +684,98 @@ html, body, #root {
   line-height: 1.5;
   padding: 4px 0;
 }
+.lp-tip strong { color: var(--text-1); }
+
+/* Layer panel extras */
+.lp-title-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 8px;
+}
+.lp-title-row .lp-title { margin-bottom: 0; }
+.lp-settings-btn {
+  background: none;
+  border: 1px solid var(--border);
+  color: var(--text-2);
+  width: 24px;
+  height: 24px;
+  border-radius: 5px;
+  cursor: pointer;
+  font-size: 13px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.15s;
+}
+.lp-settings-btn:hover {
+  border-color: var(--accent);
+  color: var(--text-0);
+  background: var(--bg-2);
+}
+
+.lp-badge {
+  display: inline-block;
+  font-size: 9px;
+  font-weight: 700;
+  padding: 1px 5px;
+  border-radius: 4px;
+  background: rgba(63,185,80,.15);
+  color: var(--green);
+  border: 1px solid rgba(63,185,80,.25);
+  margin-left: 6px;
+  vertical-align: middle;
+}
+.lp-radio-label {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+}
+.lp-disabled {
+  opacity: 0.5;
+}
+.lp-disabled:hover { opacity: 0.7; }
+.lp-config-link {
+  display: block;
+  font-size: 10px;
+  color: var(--accent);
+  cursor: pointer;
+  margin-top: 2px;
+}
+.lp-config-link:hover { text-decoration: underline; }
+.lp-date-note {
+  font-size: 10px;
+  color: var(--text-2);
+  font-weight: 400;
+}
+
+/* Settings modal */
+.settings-modal { max-width: 500px; }
+.settings-instructions {
+  background: var(--bg-2);
+  border: 1px solid var(--border);
+  border-radius: 7px;
+  padding: 12px 14px;
+}
+.si-title {
+  font-weight: 600;
+  font-size: 12px;
+  margin-bottom: 8px;
+  color: var(--text-0);
+}
+.settings-instructions ol {
+  padding-left: 18px;
+  font-size: 12px;
+  color: var(--text-1);
+  line-height: 1.8;
+}
+.settings-instructions strong {
+  color: var(--text-0);
+}
+.settings-instructions em {
+  color: var(--accent);
+  font-style: normal;
+}
 
 .lp-hint {
   margin-top: 6px;

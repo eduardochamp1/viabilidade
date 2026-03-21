@@ -160,7 +160,7 @@ export default function LayerPanel({
                   <label>Opacidade</label>
                   <input
                     type="range"
-                    min="0.3"
+                    min="0.1"
                     max="1"
                     step="0.05"
                     value={nasaOpacity}

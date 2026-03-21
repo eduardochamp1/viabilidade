@@ -1,13 +1,13 @@
 import { useState, useEffect } from 'react'
 
-const STORAGE_KEY = 'ccm-settings-v1'
+const STORAGE_KEY = 'ccm-settings-v2'
 
 const DEFAULTS = {
   provider: 'copernicus', // 'copernicus' | 'sentinelhub'
   instanceId: '5d4284a6-0700-4596-b78a-04169a826b36',
   sentinelLayer: 'TRUE_COLOR',
-  landsatLayer: 'TRUE_COLOR',
-  maxCloudCover: 30,
+  landsatLayer: 'TRUE_COLOR2',
+  maxCloudCover: 50,
 }
 
 const WMS_URLS = {

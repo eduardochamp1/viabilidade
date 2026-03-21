@@ -30,7 +30,6 @@ export default function App() {
   const [showRadar, setShowRadar] = useState(false)
 
   // UI
-  const [mouseCoords, setMouseCoords] = useState(null)
   const [sidebarOpen, setSidebarOpen] = useState(true)
   const [settingsOpen, setSettingsOpen] = useState(false)
   const mapRef = useRef(null)
@@ -105,9 +104,7 @@ export default function App() {
           selectedAreaId={selectedAreaId}
           onSelectArea={handleSelectArea}
           onMapClick={handleMapClick}
-          onMouseMove={setMouseCoords}
           mapRef={mapRef}
-          mouseCoords={mouseCoords}
           isAddingArea={isAddingArea}
           // Layers
           baseLayerId={baseLayerId}

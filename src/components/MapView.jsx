@@ -1,4 +1,4 @@
-import { useEffect } from 'react'
+import { useEffect, useRef, useCallback } from 'react'
 import {
   MapContainer,
   TileLayer,
@@ -57,16 +57,22 @@ function createMarkerIcon(status, selected = false) {
 }
 
 /* ─── Map sub-components ─────────────────────────────────────────── */
-function MapEvents({ isAddingArea, onMapClick, onMouseMove }) {
+function MapEvents({ isAddingArea, onMapClick, coordRef }) {
   useMapEvents({
     click(e) {
       if (isAddingArea) onMapClick(e.latlng)
     },
     mousemove(e) {
-      onMouseMove(e.latlng)
+      // Update DOM directly — no React re-render
+      const el = coordRef?.current
+      if (el) {
+        el.textContent = `${e.latlng.lat.toFixed(5)}, ${e.latlng.lng.toFixed(5)}`
+        el.style.display = 'block'
+      }
     },
     mouseout() {
-      onMouseMove(null)
+      const el = coordRef?.current
+      if (el) el.style.display = 'none'
     },
   })
   return null
@@ -86,9 +92,7 @@ export default function MapView({
   selectedAreaId,
   onSelectArea,
   onMapClick,
-  onMouseMove,
   mapRef,
-  mouseCoords,
   isAddingArea,
   // Layer state
   baseLayerId,
@@ -110,6 +114,7 @@ export default function MapView({
   wmsBaseUrl,
   onOpenSettings,
 }) {
+  const coordRef = useRef(null)
   const baseLayer =
     BASE_LAYERS.find(b => b.id === baseLayerId) ?? BASE_LAYERS[0]
 
@@ -140,7 +145,7 @@ export default function MapView({
         <MapEvents
           isAddingArea={isAddingArea}
           onMapClick={onMapClick}
-          onMouseMove={onMouseMove}
+          coordRef={coordRef}
         />
 
         {/* ── Base: OSM tiles ────────────────────── */}
@@ -274,12 +279,8 @@ export default function MapView({
         onOpenSettings={onOpenSettings}
       />
 
-      {/* ── Coordinates ──────────────────────────── */}
-      {mouseCoords && (
-        <div className="coord-display">
-          {mouseCoords.lat.toFixed(5)}, {mouseCoords.lng.toFixed(5)}
-        </div>
-      )}
+      {/* ── Coordinates (updated via ref, no re-renders) ── */}
+      <div className="coord-display" ref={coordRef} style={{ display: 'none' }} />
 
       {/* ── Info bar ─────────────────────────────── */}
       <div className="map-info-bar">

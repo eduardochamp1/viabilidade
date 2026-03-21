@@ -1,8 +1,7 @@
-import { useEffect, useRef, useCallback } from 'react'
+import { useEffect, useRef } from 'react'
 import {
   MapContainer,
   TileLayer,
-  WMSTileLayer,
   Marker,
   Popup,
   useMapEvents,
@@ -10,13 +9,7 @@ import {
 } from 'react-leaflet'
 import L from 'leaflet'
 import LayerPanel from './LayerPanel'
-import {
-  BASE_LAYERS,
-  LABELS_URL,
-  NASA_OVERLAYS,
-  WMS_URL,
-  sentinelTimeRange,
-} from '../utils/layers'
+import { BASE_LAYERS, LABELS_URL } from '../utils/layers'
 
 // Fix leaflet icon paths
 delete L.Icon.Default.prototype._getIconUrl
@@ -63,7 +56,6 @@ function MapEvents({ isAddingArea, onMapClick, coordRef }) {
       if (isAddingArea) onMapClick(e.latlng)
     },
     mousemove(e) {
-      // Update DOM directly — no React re-render
       const el = coordRef?.current
       if (el) {
         el.textContent = `${e.latlng.lat.toFixed(5)}, ${e.latlng.lng.toFixed(5)}`
@@ -99,34 +91,16 @@ export default function MapView({
   onBaseLayerChange,
   showLabels,
   onToggleLabels,
-  activeOverlays,
-  onToggleOverlay,
-  nasaDate,
-  onNasaDateChange,
-  nasaOpacity,
-  onNasaOpacityChange,
   showRadar,
   onToggleRadar,
   rain,
-  // Sentinel / GIS settings
-  gisSettings,
-  isGisConfigured,
-  wmsBaseUrl,
-  onOpenSettings,
 }) {
   const coordRef = useRef(null)
   const baseLayer =
     BASE_LAYERS.find(b => b.id === baseLayerId) ?? BASE_LAYERS[0]
 
-  // Sentinel-2 revisits every 5 days; 15 days = 3 passes = good coverage
-  // Shorter window = faster server response
-  const sentinelTime = sentinelTimeRange(nasaDate, 15)
-
-  // Which Sentinel Hub layer name to use
-  const shLayerName =
-    baseLayer.source === 'landsat'
-      ? gisSettings.landsatLayer
-      : gisSettings.sentinelLayer
+  // Google Hybrid already has labels built-in
+  const needsLabels = baseLayer.id !== 'google-hybrid' && baseLayer.id !== 'osm'
 
   return (
     <div className={`map-wrapper${isAddingArea ? ' adding-mode' : ''}`}>
@@ -149,78 +123,18 @@ export default function MapView({
           coordRef={coordRef}
         />
 
-        {/* ── OSM always underneath as fallback ─── */}
+        {/* ── Base layer (XYZ tiles) ─── */}
         <TileLayer
-          url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
-          attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>'
-          maxZoom={19}
+          key={baseLayer.id}
+          url={baseLayer.url}
+          attribution={baseLayer.attribution}
+          maxZoom={baseLayer.maxZoom}
         />
 
-        {/* ── Base: custom OSM (already rendered above) ── */}
-
-        {/* ── Sentinel-2 / Landsat via Sentinel Hub WMS ── */}
-        {baseLayer.type === 'sentinel' && isGisConfigured && wmsBaseUrl && (
-          <WMSTileLayer
-            key={`sh-${baseLayer.id}-${nasaDate}`}
-            url={wmsBaseUrl}
-            layers={shLayerName}
-            format="image/jpeg"
-            transparent={false}
-            version="1.1.1"
-            opacity={nasaOpacity}
-            tileSize={512}
-            maxNativeZoom={14}
-            maxZoom={19}
-            params={{
-              TIME: sentinelTime,
-              MAXCC: gisSettings.maxCloudCover,
-              SHOWLOGO: false,
-              WIDTH: 512,
-              HEIGHT: 512,
-            }}
-            attribution={`${baseLayer.label} — <a href="https://dataspace.copernicus.eu" target="_blank">Copernicus</a>`}
-          />
-        )}
-
-        {/* ── Base: NASA GIBS daily ──────────────── */}
-        {baseLayer.type === 'nasa' && (
-          <WMSTileLayer
-            key={`nasa-${baseLayer.id}-${nasaDate}`}
-            url={WMS_URL}
-            layers={baseLayer.wmsLayer}
-            format={baseLayer.format}
-            transparent={false}
-            version="1.1.1"
-            opacity={nasaOpacity}
-            maxNativeZoom={9}
-            maxZoom={19}
-            params={{ TIME: nasaDate }}
-            attribution='<a href="https://earthdata.nasa.gov" target="_blank">NASA GIBS</a>'
-          />
-        )}
-
-        {/* ── Labels overlay ─────────────────────── */}
-        {baseLayer.type !== 'tiles' && showLabels && (
+        {/* ── Labels overlay (cidades, estradas) ── */}
+        {needsLabels && showLabels && (
           <TileLayer url={LABELS_URL} maxZoom={19} pane="shadowPane" />
         )}
-
-        {/* ── NASA GIBS overlays ─────────────────── */}
-        {activeOverlays.map(olId => {
-          const ol = NASA_OVERLAYS.find(o => o.id === olId)
-          if (!ol) return null
-          return (
-            <WMSTileLayer
-              key={`ol-${ol.id}-${nasaDate}`}
-              url={WMS_URL}
-              layers={ol.wmsLayer}
-              format={ol.format}
-              transparent={ol.transparent}
-              version="1.1.1"
-              opacity={0.7}
-              params={{ TIME: nasaDate }}
-            />
-          )
-        })}
 
         {/* ── Rain radar ─────────────────────────── */}
         {showRadar && rain.radarTileUrl && (
@@ -268,20 +182,12 @@ export default function MapView({
         onBaseLayerChange={onBaseLayerChange}
         showLabels={showLabels}
         onToggleLabels={onToggleLabels}
-        activeOverlays={activeOverlays}
-        onToggleOverlay={onToggleOverlay}
-        nasaDate={nasaDate}
-        onNasaDateChange={onNasaDateChange}
-        nasaOpacity={nasaOpacity}
-        onNasaOpacityChange={onNasaOpacityChange}
         showRadar={showRadar}
         onToggleRadar={onToggleRadar}
         radarTime={rain.radarTime}
         radarFrames={rain.frames}
         radarFrameIdx={rain.frameIdx}
         onRadarFrameChange={rain.setFrameIdx}
-        isGisConfigured={isGisConfigured}
-        onOpenSettings={onOpenSettings}
       />
 
       {/* ── Coordinates (updated via ref, no re-renders) ── */}
@@ -292,9 +198,6 @@ export default function MapView({
         <span>
           📡 <strong>{baseLayer.label}</strong>
         </span>
-        {(baseLayer.type === 'sentinel' || baseLayer.type === 'nasa') && (
-          <span>Data: {nasaDate}</span>
-        )}
         {showRadar && rain.radarTime && (
           <span className="radar-badge">
             🌧{' '}

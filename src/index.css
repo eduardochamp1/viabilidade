@@ -613,57 +613,6 @@ html, body, #root {
   font-variant-numeric: tabular-nums;
 }
 
-/* Quick date buttons */
-.lp-date-section {
-  background: rgba(47,129,247,.05);
-}
-.lp-quick-dates {
-  display: flex;
-  gap: 4px;
-  margin-bottom: 8px;
-  flex-wrap: wrap;
-}
-.qd-btn {
-  padding: 4px 10px;
-  border-radius: 6px;
-  border: 1px solid var(--border);
-  background: var(--bg-2);
-  color: var(--text-1);
-  font-family: inherit;
-  font-size: 11px;
-  font-weight: 600;
-  cursor: pointer;
-  transition: all 0.15s;
-}
-.qd-btn:hover {
-  border-color: var(--accent);
-  color: var(--text-0);
-}
-.qd-btn.active {
-  background: var(--accent);
-  border-color: var(--accent);
-  color: #fff;
-}
-.lp-date-input {
-  width: 100%;
-  background: var(--bg-2);
-  border: 1px solid var(--border);
-  color: var(--text-0);
-  padding: 5px 8px;
-  border-radius: 5px;
-  font-family: inherit;
-  font-size: 12px;
-  cursor: pointer;
-  outline: none;
-}
-.lp-date-input:hover,
-.lp-date-input:focus { border-color: var(--accent); }
-.lp-date-display {
-  margin-top: 6px;
-  font-size: 11px;
-  color: var(--accent);
-  font-weight: 500;
-}
 
 .lp-sublabel {
   display: block;
@@ -686,33 +635,6 @@ html, body, #root {
 }
 .lp-tip strong { color: var(--text-1); }
 
-/* Layer panel extras */
-.lp-title-row {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  margin-bottom: 8px;
-}
-.lp-title-row .lp-title { margin-bottom: 0; }
-.lp-settings-btn {
-  background: none;
-  border: 1px solid var(--border);
-  color: var(--text-2);
-  width: 24px;
-  height: 24px;
-  border-radius: 5px;
-  cursor: pointer;
-  font-size: 13px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  transition: all 0.15s;
-}
-.lp-settings-btn:hover {
-  border-color: var(--accent);
-  color: var(--text-0);
-  background: var(--bg-2);
-}
 
 .lp-badge {
   display: inline-block;
@@ -730,51 +652,6 @@ html, body, #root {
   display: flex;
   align-items: center;
   flex-wrap: wrap;
-}
-.lp-disabled {
-  opacity: 0.5;
-}
-.lp-disabled:hover { opacity: 0.7; }
-.lp-config-link {
-  display: block;
-  font-size: 10px;
-  color: var(--accent);
-  cursor: pointer;
-  margin-top: 2px;
-}
-.lp-config-link:hover { text-decoration: underline; }
-.lp-date-note {
-  font-size: 10px;
-  color: var(--text-2);
-  font-weight: 400;
-}
-
-/* Settings modal */
-.settings-modal { max-width: 500px; }
-.settings-instructions {
-  background: var(--bg-2);
-  border: 1px solid var(--border);
-  border-radius: 7px;
-  padding: 12px 14px;
-}
-.si-title {
-  font-weight: 600;
-  font-size: 12px;
-  margin-bottom: 8px;
-  color: var(--text-0);
-}
-.settings-instructions ol {
-  padding-left: 18px;
-  font-size: 12px;
-  color: var(--text-1);
-  line-height: 1.8;
-}
-.settings-instructions strong {
-  color: var(--text-0);
-}
-.settings-instructions em {
-  color: var(--accent);
-  font-style: normal;
 }
 
 .lp-hint {

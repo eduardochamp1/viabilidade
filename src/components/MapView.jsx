@@ -1,7 +1,8 @@
-import { useEffect, useRef } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import {
   MapContainer,
   TileLayer,
+  WMSTileLayer,
   Marker,
   Popup,
   useMapEvents,
@@ -9,7 +10,12 @@ import {
 } from 'react-leaflet'
 import L from 'leaflet'
 import LayerPanel from './LayerPanel'
-import { BASE_LAYERS, LABELS_URL } from '../utils/layers'
+import MapSearch from './MapSearch'
+import {
+  BASE_LAYERS,
+  LABELS_URL,
+  sentinelTimeRange,
+} from '../utils/layers'
 
 // Fix leaflet icon paths
 delete L.Icon.Default.prototype._getIconUrl
@@ -78,6 +84,15 @@ function MapRefBridge({ mapRef }) {
   return null
 }
 
+function ZoomLimiter({ maxZoom }) {
+  const map = useMap()
+  useEffect(() => {
+    map.setMaxZoom(maxZoom)
+    if (map.getZoom() > maxZoom) map.setZoom(maxZoom)
+  }, [map, maxZoom])
+  return null
+}
+
 /* ─── Main ───────────────────────────────────────────────────────── */
 export default function MapView({
   areas,
@@ -91,16 +106,37 @@ export default function MapView({
   onBaseLayerChange,
   showLabels,
   onToggleLabels,
+  nasaDate,
+  onNasaDateChange,
+  nasaOpacity,
+  onNasaOpacityChange,
   showRadar,
   onToggleRadar,
   rain,
+  // WMS settings
+  gisSettings,
+  isGisConfigured,
+  wmsBaseUrl,
+  onOpenSettings,
 }) {
   const coordRef = useRef(null)
-  const baseLayer =
-    BASE_LAYERS.find(b => b.id === baseLayerId) ?? BASE_LAYERS[0]
+  const [wmsError, setWmsError] = useState(false)
+  const baseLayer = BASE_LAYERS.find(b => b.id === baseLayerId) ?? BASE_LAYERS[0]
 
-  // Google Hybrid already has labels built-in
-  const needsLabels = baseLayer.id !== 'google-hybrid' && baseLayer.id !== 'osm'
+  // Google Hybrid tem labels embutidas; OSM já é mapa de ruas
+  const needsLabels = baseLayer.type === 'xyz'
+    && baseLayer.id !== 'google-hybrid'
+    && baseLayer.id !== 'osm'
+
+  // Reseta erro ao trocar de camada ou data
+  useEffect(() => { setWmsError(false) }, [baseLayerId, nasaDate])
+
+  const sentinelTime = sentinelTimeRange(nasaDate, 60)
+
+  const shLayerName =
+    baseLayer.source === 'landsat'
+      ? (gisSettings?.landsatLayer ?? 'TRUE_COLOR2')
+      : (gisSettings?.sentinelLayer ?? 'TRUE_COLOR')
 
   return (
     <div className={`map-wrapper${isAddingArea ? ' adding-mode' : ''}`}>
@@ -117,21 +153,87 @@ export default function MapView({
         zoomControl={true}
       >
         <MapRefBridge mapRef={mapRef} />
+        <ZoomLimiter maxZoom={baseLayer.mapMaxZoom ?? 19} />
         <MapEvents
           isAddingArea={isAddingArea}
           onMapClick={onMapClick}
           coordRef={coordRef}
         />
 
-        {/* ── Base layer (XYZ tiles) ─── */}
-        <TileLayer
-          key={baseLayer.id}
-          url={baseLayer.url}
-          attribution={baseLayer.attribution}
-          maxZoom={baseLayer.maxZoom}
-        />
+        {/* ── Base XYZ tile layer (Esri, Google, OSM) ─── */}
+        {baseLayer.type === 'xyz' && (
+          <TileLayer
+            key={baseLayer.id}
+            url={baseLayer.url}
+            attribution={baseLayer.attribution}
+            maxZoom={baseLayer.maxZoom ?? 19}
+            subdomains={baseLayer.subdomains ?? 'abc'}
+          />
+        )}
 
-        {/* ── Labels overlay (cidades, estradas) ── */}
+        {/* ── OSM fallback embaixo das camadas WMS ── */}
+        {baseLayer.type === 'wms' && (
+          <TileLayer
+            url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
+            attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>'
+            maxZoom={19}
+          />
+        )}
+
+        {/* ── Sentinel-2 / Landsat via Sentinel Hub WMS ── */}
+        {baseLayer.type === 'wms' && baseLayer.source !== 'sentinel1' && isGisConfigured && wmsBaseUrl && (
+          <WMSTileLayer
+            key={`sh-${baseLayer.id}-${nasaDate}`}
+            url={wmsBaseUrl}
+            layers={shLayerName}
+            format="image/jpeg"
+            transparent={false}
+            version="1.1.1"
+            opacity={nasaOpacity}
+            tileSize={512}
+            zoomOffset={-1}
+            maxNativeZoom={17}
+            maxZoom={19}
+            params={{
+              TIME: sentinelTime,
+              MAXCC: gisSettings?.maxCloudCover ?? 80,
+              SHOWLOGO: false,
+            }}
+            attribution={`${baseLayer.label} — <a href="https://dataspace.copernicus.eu" target="_blank">Copernicus</a>`}
+            eventHandlers={{
+              tileerror: () => setWmsError(true),
+              tileload: () => setWmsError(false),
+            }}
+          />
+        )}
+
+        {/* ── Sentinel-1 SAR via Sentinel Hub WMS ── */}
+        {baseLayer.type === 'wms' && baseLayer.source === 'sentinel1' && isGisConfigured && wmsBaseUrl && (
+          <WMSTileLayer
+            key={`s1-${baseLayer.id}-${nasaDate}`}
+            url={wmsBaseUrl}
+            layers={gisSettings?.sentinel1Layer ?? 'SAR-RGB'}
+            format="image/jpeg"
+            transparent={false}
+            version="1.1.1"
+            opacity={nasaOpacity}
+            tileSize={512}
+            zoomOffset={-1}
+            maxNativeZoom={15}
+            maxZoom={19}
+            params={{
+              TIME: sentinelTimeRange(nasaDate, 90),
+              SHOWLOGO: false,
+            }}
+            attribution='Sentinel-1 SAR — <a href="https://dataspace.copernicus.eu" target="_blank">Copernicus</a>'
+            eventHandlers={{
+              tileerror: () => setWmsError(true),
+              tileload: () => setWmsError(false),
+            }}
+          />
+        )}
+
+        {/* ── Labels overlay ─────────────────────── */}
         {needsLabels && showLabels && (
           <TileLayer url={LABELS_URL} maxZoom={19} pane="shadowPane" />
         )}
@@ -176,21 +278,48 @@ export default function MapView({
         ))}
       </MapContainer>
 
+      {/* ── WMS sem configuração ─────────────────── */}
+      {baseLayer.type === 'wms' && !isGisConfigured && (
+        <div className="wms-error-banner wms-warn-banner">
+          ⚙️ Configure o Instance ID do Copernicus para ver imagens {baseLayer.label}.{' '}
+          <button onClick={onOpenSettings}>Configurar agora</button>
+        </div>
+      )}
+
+      {/* ── WMS erro de carregamento ─────────────── */}
+      {wmsError && baseLayer.type === 'wms' && isGisConfigured && (
+        <div className="wms-error-banner">
+          ⚠️ Imagem não carregou. Verifique o <strong>Instance ID</strong> e o
+          nome da camada (<code>{baseLayer.source === 'sentinel1' ? gisSettings?.sentinel1Layer : shLayerName}</code>)
+          no Copernicus Dashboard.{' '}
+          <button onClick={onOpenSettings}>Abrir Configurações ⚙</button>
+        </div>
+      )}
+
+      {/* ── Busca de local ───────────────────────── */}
+      <MapSearch mapRef={mapRef} />
+
       {/* ── Layer panel ──────────────────────────── */}
       <LayerPanel
         baseLayerId={baseLayerId}
         onBaseLayerChange={onBaseLayerChange}
         showLabels={showLabels}
         onToggleLabels={onToggleLabels}
+        nasaDate={nasaDate}
+        onNasaDateChange={onNasaDateChange}
+        nasaOpacity={nasaOpacity}
+        onNasaOpacityChange={onNasaOpacityChange}
         showRadar={showRadar}
         onToggleRadar={onToggleRadar}
         radarTime={rain.radarTime}
         radarFrames={rain.frames}
         radarFrameIdx={rain.frameIdx}
         onRadarFrameChange={rain.setFrameIdx}
+        isGisConfigured={isGisConfigured}
+        onOpenSettings={onOpenSettings}
       />
 
-      {/* ── Coordinates (updated via ref, no re-renders) ── */}
+      {/* ── Coordinates ──────────────────────────── */}
       <div className="coord-display" ref={coordRef} style={{ display: 'none' }} />
 
       {/* ── Info bar ─────────────────────────────── */}
@@ -198,6 +327,13 @@ export default function MapView({
         <span>
           📡 <strong>{baseLayer.label}</strong>
         </span>
+        {baseLayer.updateLabel && (
+          <span>🕒 {baseLayer.updateLabel}</span>
+        )}
+        {baseLayer.type === 'wms' && isGisConfigured && (
+          <span>📅 Buscando até: {nasaDate}</span>
+        )}
+        <span>🔍 Zoom máx: {baseLayer.mapMaxZoom ?? 19}</span>
         {showRadar && rain.radarTime && (
           <span className="radar-badge">
             🌧{' '}

@@ -3,12 +3,16 @@ import Header from './components/Header'
 import Sidebar from './components/Sidebar'
 import MapView from './components/MapView'
 import AddAreaModal from './components/AddAreaModal'
+import SettingsModal from './components/SettingsModal'
 import { useAreas } from './hooks/useAreas'
 import { useRainRadar } from './hooks/useRainRadar'
+import { useSettings } from './hooks/useSettings'
+import { getYesterday } from './utils/layers'
 
 export default function App() {
   const { areas, addArea, updateArea, deleteArea } = useAreas()
   const rain = useRainRadar()
+  const { settings, updateAll, isConfigured, wmsBaseUrl } = useSettings()
 
   // Area selection
   const [selectedAreaId, setSelectedAreaId] = useState(null)
@@ -18,10 +22,13 @@ export default function App() {
   // Layers — default to Esri Satellite (best quality, no config needed)
   const [baseLayerId, setBaseLayerId] = useState('esri-satellite')
   const [showLabels, setShowLabels] = useState(true)
+  const [nasaDate, setNasaDate] = useState(getYesterday())
+  const [nasaOpacity, setNasaOpacity] = useState(1.0)
   const [showRadar, setShowRadar] = useState(false)
 
   // UI
   const [sidebarOpen, setSidebarOpen] = useState(true)
+  const [settingsOpen, setSettingsOpen] = useState(false)
   const mapRef = useRef(null)
 
   const stats = {
@@ -87,13 +94,21 @@ export default function App() {
           onBaseLayerChange={setBaseLayerId}
           showLabels={showLabels}
           onToggleLabels={() => setShowLabels(v => !v)}
+          nasaDate={nasaDate}
+          onNasaDateChange={setNasaDate}
+          nasaOpacity={nasaOpacity}
+          onNasaOpacityChange={setNasaOpacity}
           showRadar={showRadar}
           onToggleRadar={() => setShowRadar(v => !v)}
           rain={rain}
+          // WMS settings
+          gisSettings={settings}
+          isGisConfigured={isConfigured}
+          wmsBaseUrl={wmsBaseUrl}
+          onOpenSettings={() => setSettingsOpen(true)}
         />
       </div>
 
-      {/* Add area modal */}
       {pendingCoords && (
         <AddAreaModal
           coords={pendingCoords}
@@ -102,6 +117,14 @@ export default function App() {
             setPendingCoords(null)
             setIsAddingArea(false)
           }}
+        />
+      )}
+
+      {settingsOpen && (
+        <SettingsModal
+          settings={settings}
+          onSave={updateAll}
+          onClose={() => setSettingsOpen(false)}
         />
       )}
     </div>

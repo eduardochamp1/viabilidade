@@ -1047,6 +1047,89 @@ html, body, #root {
 .form-group textarea:focus { border-color: var(--accent); }
 .form-group textarea { resize: vertical; min-height: 68px; }
 .form-row { display: flex; gap: 10px; }
+
+/* ── Settings modal: testar conexão ─────────────────────────────── */
+.instance-row {
+  display: flex;
+  gap: 6px;
+}
+.instance-input {
+  flex: 1;
+  background: var(--bg-2);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  color: var(--text-0);
+  padding: 6px 10px;
+  font-size: 13px;
+  font-family: 'Geist Mono', monospace;
+  outline: none;
+}
+.instance-input:focus { border-color: var(--accent); }
+.test-btn {
+  background: var(--bg-3);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  color: var(--text-0);
+  padding: 6px 12px;
+  font-size: 12px;
+  cursor: pointer;
+  white-space: nowrap;
+  font-family: inherit;
+}
+.test-btn:hover { border-color: var(--accent); color: var(--accent); }
+.test-btn.loading { opacity: 0.6; cursor: default; }
+.test-result {
+  margin-top: 5px;
+  font-size: 12px;
+  padding: 5px 9px;
+  border-radius: 6px;
+}
+.test-result.ok {
+  background: rgba(63,185,80,.12);
+  border: 1px solid rgba(63,185,80,.3);
+  color: #3fb950;
+}
+.test-result.err {
+  background: rgba(248,81,73,.1);
+  border: 1px solid rgba(248,81,73,.3);
+  color: #f85149;
+}
+
+/* ── Settings instructions ─────────────────────────────────────── */
+.settings-instructions {
+  background: var(--bg-1);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 12px 14px;
+  font-size: 12px;
+  color: var(--text-1);
+  line-height: 1.6;
+}
+.si-title {
+  font-weight: 600;
+  color: var(--text-0);
+  margin-bottom: 6px;
+}
+.settings-instructions ol {
+  margin: 0;
+  padding-left: 16px;
+}
+.settings-instructions li { margin-bottom: 4px; }
+.settings-instructions ul {
+  margin: 3px 0;
+  padding-left: 14px;
+}
+.settings-instructions a { color: var(--accent); }
+.settings-instructions code {
+  background: var(--bg-2);
+  border: 1px solid var(--border);
+  padding: 1px 5px;
+  border-radius: 4px;
+  font-family: 'Geist Mono', monospace;
+  font-size: 11px;
+  color: #e6db74;
+}
+
 .modal-footer {
   display: flex;
   justify-content: flex-end;

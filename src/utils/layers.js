@@ -45,7 +45,7 @@ export const BASE_LAYERS = [
     type: 'wms',
     source: 'sentinel2',
     badge: '🔭 Alta Resolução',
-    mapMaxZoom: 17,
+    mapMaxZoom: 19,
   },
   {
     id: 'landsat',
@@ -54,7 +54,7 @@ export const BASE_LAYERS = [
     type: 'wms',
     source: 'landsat',
     badge: '🛰 Cobertura ampla',
-    mapMaxZoom: 14,
+    mapMaxZoom: 17,
   },
   {
     id: 'sentinel1',

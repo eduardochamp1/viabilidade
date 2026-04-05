@@ -192,7 +192,7 @@ export default function MapView({
             opacity={nasaOpacity}
             tileSize={512}
             zoomOffset={-1}
-            maxNativeZoom={17}
+            maxNativeZoom={19}
             maxZoom={19}
             params={{
               TIME: sentinelTime,
